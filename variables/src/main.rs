@@ -1,13 +1,13 @@
-const SPEED_OF_LIGHT:u64 = 299_792_458;
+const SPEED_OF_LIGHT: u64 = 299_792_458;
 
 fn main() {
     let mut x = 5;
     println!("The value of x is: {x}");
     x = 6;
     println!("The value of x is: {x}");
-    // How to format to 299.792,458 ? 
+    // How to format to 299.792,458 ?
     println!("Speed of light is: {SPEED_OF_LIGHT} m/s !");
-    
+
     // Other excersise (shadowing)
 
     let x = 5;
@@ -31,12 +31,13 @@ fn main() {
     numeric_operations();
     tuples_operations();
     array_type();
+    functions();
+    statements_vs_expressions();
+    println!("{}", five());
 }
 
 fn numeric_operations() {
-    
     // Numeric operations
-
 
     // addition
     let _sum = 5 + 10;
@@ -72,14 +73,48 @@ fn tuples_operations() {
 fn array_type() {
     let a = [1, 2, 3, 4, 5];
     println!("{:?}", a);
-    let months = ["January", "February", "March", "April", "May", "June", "July",
-              "August", "September", "October", "November", "December"];
-              println!("{:?}", months);
+    let months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ];
+    println!("{:?}", months);
     let b = [3; 5];
     println!("{:?}", b);
     let first = a[0];
     println!("a[0]: {first}");
-    
-    println!("Unreacheable - Runtime Error");
-    a[100];
+
+    // println!("Unreacheable - Runtime Error");
+    // a[100];
+}
+
+fn functions() {
+    print_labeled_measurement(5, 'h')
+}
+
+fn print_labeled_measurement(value: i32, unit_label: char) {
+    println!("The measurement is: {}{}", value, unit_label);
+}
+
+fn statements_vs_expressions() {
+    let y = {
+        let x = 3;
+        x + 1
+    };
+
+    println!("The value of y is: {y}");
+}
+
+fn five() -> i32 {
+    return 5;
+    // 5
 }
