@@ -8,14 +8,14 @@ use std::io::{self, prelude::*, BufReader};
 
 fn main() {
     // leer_palabra();
-    let letra = match partida::Partida::obtener_jugada() {
+    let letra = match partida::Partida::obtener_jugada(&mut BufReader::new(std::io::stdin())) {
         Ok(letra) => letra,
-        Err(_) => return
+        Err(_) => return,
     };
     println!("Se obtuvo la letra: {}", letra);
 }
 
-fn leer_palabra() -> io::Result<()>  {
+fn obtener_palabra_secreta() -> io::Result<()> {
     // Obtiene un array de argumentos (igual que argv)
     let args: Vec<String> = env::args().collect();
     // Saco el path
