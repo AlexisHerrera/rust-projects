@@ -10,7 +10,7 @@ pub enum JugadaError {
 pub struct Partida {
     intentos: i32,
     letras_descubiertas: Vec<char>,
-    letras_por_descubrir: Vec<char>
+    palabra_secreta: String
 }
 
 impl Partida {
@@ -18,9 +18,9 @@ impl Partida {
     // ver si se puede cambiar a str
     fn new(palabra_secreta: String, intentos: i32) -> Partida {
         Partida {
+            palabra_secreta,
             intentos,
-            letras_descubiertas: vec![], 
-            letras_por_descubrir: palabra_secreta.chars().collect()
+            letras_descubiertas: vec![]
         }
     }
     // Resta un intento
@@ -59,8 +59,17 @@ impl Partida {
         Ok(letra)
     }
 
-    fn realizar_jugada(&self, letra: char) {
+    fn realizar_jugada(&mut self, letra: char) {
+        // if self.letras_descubiertas.contains(&letra) {
 
+        // }
+        for letra_secreta in self.palabra_secreta.chars() {
+            if letra_secreta == letra {
+                self.letras_descubiertas.push(letra);
+                return ;
+            }
+        }
+        self.reducir_intentos();
     }
 }
 
@@ -85,10 +94,18 @@ mod tests {
     fn realizar_jugada_que_descubre_letra() {
         let mut partida = Partida::new("camion".to_string(), 5);
         partida.realizar_jugada('c');
-        assert!(!partida.letras_por_descubrir.contains(&'c'));
         assert_eq!(partida.letras_descubiertas, vec!['c']);
         assert_eq!(partida.intentos, 5);
     }
+
+    #[test]
+    fn realizar_jugada_que_no_descubre_letra() {
+        let mut partida = Partida::new("camion".to_string(), 5);
+        partida.realizar_jugada('f');
+        assert_eq!(partida.letras_descubiertas, vec![]);
+        assert_eq!(partida.intentos, 4);
+    }
+
 }
 // Estos testean sobre el metodo obtener_jugada, es más de integración.
 mod test_input_jugada {
