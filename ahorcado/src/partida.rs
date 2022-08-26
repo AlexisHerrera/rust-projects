@@ -86,23 +86,35 @@ impl Partida {
     }
     
     fn imprimir_estado_juego(&self) {
-        print!("La palabra al momento es:");
+        print!("\nLa palabra hasta el momento es: ");
         for letra_secreta in self.palabra_secreta.chars() {
             if self.letras_descubiertas.contains(&letra_secreta) {
-                print!("{}",letra_secreta);
+                print!("{} ",letra_secreta);
             } else {
-                print!("_");
+                print!("_ ");
             }
-            io::stdout().flush().unwrap();
         }
 
-        println!("\nLetras utilizadas: {:?}", self.letras_sin_exito);
+        println!("");
+        print!("Adivinaste las siguientes letras: ");
+        for letra_adivinada in self.letras_descubiertas.iter() {
+            print!("{} ",letra_adivinada);
+        }
+        println!("");
+        print!("Letras que no funcionaron: ");
+        for letras_error in self.letras_sin_exito.iter() {
+            print!("{} ",letras_error);
+        }
+        println!("");
+        println!("Te quedan {} intentos.", self.intentos);
+        print!("Ingresa una letra: ");
+        io::stdout().flush().unwrap();
     }
 
     pub fn iniciar_partida(&mut self) {
         // Moverlo al crear la partida?
         let mut input = std::io::stdin();
-        println!("Bienvenido al juego del ahorcado");
+        println!("Bienvenido al ahorcado de FIUBA!");
         while self.continua_juego() {
             self.imprimir_estado_juego();
             let jugada = Partida::obtener_jugada(&mut input);
