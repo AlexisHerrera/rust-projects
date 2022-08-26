@@ -11,18 +11,17 @@ pub struct Partida {
     intentos: i32,
     letras_descubiertas: Vec<char>,
     letras_sin_exito: Vec<char>,
-    palabra_secreta: String
+    palabra_secreta: String,
 }
 
 impl Partida {
-
     // ver si se puede cambiar a str
     pub fn new(palabra_secreta: String, intentos: i32) -> Partida {
         Partida {
             palabra_secreta,
             intentos,
             letras_descubiertas: vec![],
-            letras_sin_exito: vec![]
+            letras_sin_exito: vec![],
         }
     }
     // Resta un intento
@@ -36,7 +35,7 @@ impl Partida {
                 return true;
             }
         }
-        return false;
+        false
     }
 
     // Devuelve true si quedan intentos, false en caso contrario
@@ -73,39 +72,39 @@ impl Partida {
 
     fn realizar_jugada(&mut self, letra: char) {
         if self.letras_descubiertas.contains(&letra) {
-            return ;
+            return;
         }
         for letra_secreta in self.palabra_secreta.chars() {
             if letra_secreta == letra {
                 self.letras_descubiertas.push(letra);
-                return ;
+                return;
             }
         }
         self.reducir_intentos();
         self.letras_sin_exito.push(letra);
     }
-    
+
     fn imprimir_estado_juego(&self) {
         print!("\nLa palabra hasta el momento es: ");
         for letra_secreta in self.palabra_secreta.chars() {
             if self.letras_descubiertas.contains(&letra_secreta) {
-                print!("{} ",letra_secreta);
+                print!("{} ", letra_secreta);
             } else {
                 print!("_ ");
             }
         }
 
-        println!("");
+        println!();
         print!("Adivinaste las siguientes letras: ");
         for letra_adivinada in self.letras_descubiertas.iter() {
-            print!("{} ",letra_adivinada);
+            print!("{} ", letra_adivinada);
         }
-        println!("");
+        println!();
         print!("Letras que no funcionaron: ");
         for letras_error in self.letras_sin_exito.iter() {
-            print!("{} ",letras_error);
+            print!("{} ", letras_error);
         }
-        println!("");
+        println!();
         println!("Te quedan {} intentos.", self.intentos);
         print!("Ingresa una letra: ");
         io::stdout().flush().unwrap();
@@ -120,7 +119,7 @@ impl Partida {
             let jugada = Partida::obtener_jugada(&mut input);
             let letra = match jugada {
                 Ok(letra) => letra,
-                Err(_) => continue
+                Err(_) => continue,
             };
             self.realizar_jugada(letra);
         }
@@ -128,7 +127,8 @@ impl Partida {
     }
 
     pub fn imprimir_mensaje_final(&self) {
-        if self.quedan_letras() { // Perdio
+        if self.quedan_letras() {
+            // Perdio
             println!("Perdiste!")
         } else {
             println!("Ganaste!")
@@ -204,7 +204,6 @@ mod tests {
         partida.realizar_jugada('s');
         assert!(!partida.continua_juego());
     }
-
 }
 // Estos testean sobre el metodo obtener_jugada, es más de integración.
 mod test_input_jugada {
@@ -218,7 +217,7 @@ mod test_input_jugada {
 
 mod test_parse_string {
     use super::Partida;
-    
+
     #[test]
     fn se_obtiene_la_letra_ingresada() {
         assert_eq!(Partida::obtener_letra("c").unwrap(), 'c');
