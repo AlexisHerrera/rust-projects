@@ -1,4 +1,4 @@
-use std::io::BufRead;
+use std::io::{self, prelude::*, BufReader};
 
 #[derive(Debug)]
 
@@ -10,17 +10,19 @@ pub enum JugadaError {
 pub struct Partida {
     intentos: i32,
     letras_descubiertas: Vec<char>,
+    letras_sin_exito: Vec<char>,
     palabra_secreta: String
 }
 
 impl Partida {
 
     // ver si se puede cambiar a str
-    fn new(palabra_secreta: String, intentos: i32) -> Partida {
+    pub fn new(palabra_secreta: String, intentos: i32) -> Partida {
         Partida {
             palabra_secreta,
             intentos,
-            letras_descubiertas: vec![]
+            letras_descubiertas: vec![],
+            letras_sin_exito: vec![]
         }
     }
     // Resta un intento
@@ -29,8 +31,8 @@ impl Partida {
     }
 
     // Devuelve true si quedan intentos, false en caso contrario
-    fn quedan_intentos(&self) -> bool {
-        self.intentos > 0
+    fn continua_juego(&self) -> bool {
+        self.intentos > 0 && (self.letras_descubiertas.len() < self.palabra_secreta.len())
     }
 
     // Se testea con dependency injection sobre el input: https://jeffkreeftmeijer.com/rust-stdin-stdout-testing/
@@ -43,7 +45,6 @@ impl Partida {
             Err(_) => return Err(JugadaError::Lectura),
         }
         let input_string = input_string.trim();
-        println!("Largo de input_string es {}", input_string.len());
         Partida::obtener_letra(input_string)
     }
 
@@ -60,9 +61,9 @@ impl Partida {
     }
 
     fn realizar_jugada(&mut self, letra: char) {
-        // if self.letras_descubiertas.contains(&letra) {
-
-        // }
+        if self.letras_descubiertas.contains(&letra) {
+            return ;
+        }
         for letra_secreta in self.palabra_secreta.chars() {
             if letra_secreta == letra {
                 self.letras_descubiertas.push(letra);
@@ -70,6 +71,34 @@ impl Partida {
             }
         }
         self.reducir_intentos();
+        self.letras_sin_exito.push(letra);
+    }
+    // TODO: Separar output pantalla para poder testear la palabra al momento
+    fn imprimir_estado_juego(&self) {
+        print!("La palabra al momento es:");
+        for letra_secreta in self.palabra_secreta.chars() {
+            if self.letras_descubiertas.contains(&letra_secreta) {
+                print!("{}",letra_secreta);
+            } else {
+                print!("_");
+            }
+            io::stdout().flush().unwrap();
+        }
+        println!("");
+    }
+
+    pub fn iniciar_partida(&mut self) {
+        let input = &mut BufReader::new(std::io::stdin());
+        println!("Bienvenido al juego del ahorcado");
+        while self.continua_juego() {
+            self.imprimir_estado_juego();
+            let jugada = Partida::obtener_jugada(input);
+            let letra = match jugada {
+                Ok(letra) => letra,
+                Err(_) => continue
+            };
+            self.realizar_jugada(letra);
+        }
     }
 }
 
@@ -85,10 +114,10 @@ mod tests {
     }
 
     #[test]
-    fn quedan_intentos() {
+    fn partida_termina_cuando_contador_es_0() {
         let mut partida = Partida::new("hola".to_string(), 1);
         partida.reducir_intentos();
-        assert!(!partida.quedan_intentos());
+        assert!(!partida.continua_juego());
     }
     #[test]
     fn realizar_jugada_que_descubre_letra() {
@@ -103,7 +132,32 @@ mod tests {
         let mut partida = Partida::new("camion".to_string(), 5);
         partida.realizar_jugada('f');
         assert_eq!(partida.letras_descubiertas, vec![]);
+        assert_eq!(partida.letras_sin_exito, vec!['f']);
         assert_eq!(partida.intentos, 4);
+    }
+    #[test]
+    fn realizar_jugada_repetida_que_descubre_no_altera_el_juego() {
+        let mut partida = Partida::new("camion".to_string(), 5);
+        partida.realizar_jugada('c');
+        partida.realizar_jugada('c');
+        assert_eq!(partida.letras_descubiertas, vec!['c']);
+        assert_eq!(partida.intentos, 5);
+    }
+    #[test]
+    fn el_juego_termina_cuando_se_descubren_todas_las_letras() {
+        let mut partida = Partida::new("casa".to_string(), 5);
+        partida.realizar_jugada('c');
+        partida.realizar_jugada('a');
+        partida.realizar_jugada('s');
+        assert!(!partida.continua_juego());
+    }
+
+    #[test]
+    fn el_juego_no_termina_si_quedan_letras() {
+        let mut partida = Partida::new("casa".to_string(), 5);
+        partida.realizar_jugada('c');
+        partida.realizar_jugada('a');
+        assert!(partida.continua_juego());
     }
 
 }

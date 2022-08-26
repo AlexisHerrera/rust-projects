@@ -7,12 +7,9 @@ use std::io::{self, prelude::*, BufReader};
 // https://stackoverflow.com/questions/45882329/read-large-files-line-by-line-in-rust
 
 fn main() {
-    // leer_palabra();
-    let letra = match partida::Partida::obtener_jugada(&mut BufReader::new(std::io::stdin())) {
-        Ok(letra) => letra,
-        Err(_) => return,
-    };
-    println!("Se obtuvo la letra: {}", letra);
+    // Por ahora solo inicio el juego con una palabra
+    let mut partida = partida::Partida::new("casino".to_string(), 5);
+    partida.iniciar_partida();
 }
 
 fn obtener_palabra_secreta() -> io::Result<()> {
