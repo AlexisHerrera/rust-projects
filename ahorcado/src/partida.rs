@@ -30,17 +30,28 @@ impl Partida {
         self.intentos -= 1;
     }
 
+    fn quedan_letras(&self) -> bool {
+        for letra_secreta in self.palabra_secreta.chars() {
+            if !self.letras_descubiertas.contains(&letra_secreta) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // Devuelve true si quedan intentos, false en caso contrario
     fn continua_juego(&self) -> bool {
-        self.intentos > 0 && (self.letras_descubiertas.len() < self.palabra_secreta.len())
+        self.intentos > 0 && self.quedan_letras()
     }
 
     // Se testea con dependency injection sobre el input: https://jeffkreeftmeijer.com/rust-stdin-stdout-testing/
     // El metodo obtener_letra se encarga de parsear el input
-    pub fn obtener_jugada(input: &mut impl BufRead) -> Result<char, JugadaError> {
+    pub fn obtener_jugada(input: &mut impl Read) -> Result<char, JugadaError> {
         let mut input_string = String::new();
+        // Para que pueda leer linea a linea
+        let mut input_buf = BufReader::new(input);
         // Cambiar a unwrap_or
-        match input.read_line(&mut input_string) {
+        match input_buf.read_line(&mut input_string) {
             Ok(_) => (),
             Err(_) => return Err(JugadaError::Lectura),
         }
@@ -73,7 +84,7 @@ impl Partida {
         self.reducir_intentos();
         self.letras_sin_exito.push(letra);
     }
-    // TODO: Separar output pantalla para poder testear la palabra al momento
+    
     fn imprimir_estado_juego(&self) {
         print!("La palabra al momento es:");
         for letra_secreta in self.palabra_secreta.chars() {
@@ -84,21 +95,33 @@ impl Partida {
             }
             io::stdout().flush().unwrap();
         }
-        println!("");
+
+        println!("\nLetras utilizadas: {:?}", self.letras_sin_exito);
     }
 
     pub fn iniciar_partida(&mut self) {
-        let input = &mut BufReader::new(std::io::stdin());
+        // Moverlo al crear la partida?
+        let mut input = std::io::stdin();
         println!("Bienvenido al juego del ahorcado");
         while self.continua_juego() {
             self.imprimir_estado_juego();
-            let jugada = Partida::obtener_jugada(input);
+            let jugada = Partida::obtener_jugada(&mut input);
             let letra = match jugada {
                 Ok(letra) => letra,
                 Err(_) => continue
             };
             self.realizar_jugada(letra);
         }
+        self.imprimir_mensaje_final()
+    }
+
+    pub fn imprimir_mensaje_final(&self) {
+        if self.quedan_letras() { // Perdio
+            println!("Perdiste!")
+        } else {
+            println!("Ganaste!")
+        }
+        println!("La palabra secreta era : {}", self.palabra_secreta)
     }
 }
 
@@ -145,10 +168,11 @@ mod tests {
     }
     #[test]
     fn el_juego_termina_cuando_se_descubren_todas_las_letras() {
-        let mut partida = Partida::new("casa".to_string(), 5);
+        let mut partida = Partida::new("caso".to_string(), 5);
         partida.realizar_jugada('c');
         partida.realizar_jugada('a');
         partida.realizar_jugada('s');
+        partida.realizar_jugada('o');
         assert!(!partida.continua_juego());
     }
 
@@ -158,6 +182,15 @@ mod tests {
         partida.realizar_jugada('c');
         partida.realizar_jugada('a');
         assert!(partida.continua_juego());
+    }
+
+    #[test]
+    fn solo_es_necesario_poner_la_letra_una_vez() {
+        let mut partida = Partida::new("casa".to_string(), 5);
+        partida.realizar_jugada('c');
+        partida.realizar_jugada('a');
+        partida.realizar_jugada('s');
+        assert!(!partida.continua_juego());
     }
 
 }
@@ -192,3 +225,11 @@ mod test_parse_string {
         assert!(Partida::obtener_letra("1").is_err());
     }
 }
+
+// TODO:
+// 1- Agregar prints de juego, "ingrese una letra", cantidad de intentos,
+//  letras utilizadas, palabra descubierta al finalizar, mensaje de error al no ingresar una letra
+// 2- Verificar casos borde, palabra nula, escribe muchas letras, etc.
+// 3- Conectar la lectura del archivo de palabras con el juego (testear con test de integración??)
+// 4- Eliminar warnings, correr clippy y fmt. Ver si es necesario que sea string el iniciar partida.
+// 5. Podria desacoplarse también el output (sacar todos los print o println)

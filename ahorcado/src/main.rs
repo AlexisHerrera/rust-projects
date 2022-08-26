@@ -1,31 +1,30 @@
 mod partida;
-use std::env;
-use std::fs::File;
-use std::io::{self, prelude::*, BufReader};
+mod repositorio_palabras;
 
+use std::fs::File;
+use std::env;
 // ver https://doc.rust-lang.org/beta/std/io/struct.BufReader.html
 // https://stackoverflow.com/questions/45882329/read-large-files-line-by-line-in-rust
 
 fn main() {
-    // Por ahora solo inicio el juego con una palabra
-    let mut partida = partida::Partida::new("casino".to_string(), 5);
-    partida.iniciar_partida();
+    let archivo = obtener_archivo().unwrap();
+    let mut repositorio_palabras = repositorio_palabras::RepositorioPalabras::new(archivo);
+    loop {
+        let palabra = repositorio_palabras.obtener_palabra();
+        if palabra == "" {break;}
+
+        let mut partida = partida::Partida::new(palabra, 5);
+        partida.iniciar_partida();
+    }
 }
 
-fn obtener_palabra_secreta() -> io::Result<()> {
-    // Obtiene un array de argumentos (igual que argv)
+fn obtener_archivo() -> Result<File, std::io::Error> {
     let args: Vec<String> = env::args().collect();
     // Saco el path
     let path = &args[1];
     // Abro el archivo siendo el pwd la raiz del proyecto
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
-
-    // reader.lines devuelve un iterador pero guarda en memoria
-    // cada palabra o linea.
-    for line in reader.lines() {
-        println!("{}", line?);
-    }
-
-    Ok(())
+    File::open(path)
 }
+
+
+// nit: Se podria crear un test para que testee que se lee cada palabra?
