@@ -1,18 +1,18 @@
 #[allow(unused_imports)]
-mod repositorio_palabras;
+mod repositorio_lineas;
 
 use std::env;
 use std::fs::File;
 
 fn main() {
     let archivo = obtener_archivo().unwrap();
-    let mut repositorio_palabras = repositorio_palabras::RepositorioPalabras::new(archivo);
+    let mut repositorio_lineas = repositorio_lineas::RepositorioLineas::new(archivo);
     loop {
-        let palabra = repositorio_palabras.obtener_palabra();
+        let palabra = repositorio_lineas.obtener_linea();
         if palabra.is_empty() {
             break;
         }
-        // Hacer algo por ej println! a la palabra
+        // Hacer algo por ej println! a la linea
         println!("{}", palabra);
     }
 }
@@ -24,5 +24,3 @@ fn obtener_archivo() -> Result<File, std::io::Error> {
     // Abro el archivo siendo el pwd la raiz del proyecto
     File::open(path)
 }
-
-// nit: Se podria crear un test para que testee que se lee cada palabra?

@@ -1,19 +1,19 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-pub struct RepositorioPalabras {
+pub struct RepositorioLineas {
     reader: BufReader<File>,
 }
 
-impl RepositorioPalabras {
-    pub fn new(inner: File) -> RepositorioPalabras {
-        RepositorioPalabras {
+impl RepositorioLineas {
+    pub fn new(inner: File) -> RepositorioLineas {
+        RepositorioLineas {
             reader: BufReader::new(inner),
         }
     }
 
     // Devuelve una linea sin el salto de linea
-    pub fn obtener_palabra(&mut self) -> String {
+    pub fn obtener_linea(&mut self) -> String {
         let mut line = String::new();
         self.reader
             .read_line(&mut line)
