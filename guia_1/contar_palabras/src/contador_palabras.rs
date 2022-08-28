@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-// TODO: Hacer un struct para palabra!
+// TODO: Hacer un struct para palabra, sería lo correcto
 #[derive(Debug, PartialEq)]
 struct Registro {
     palabra: String,
