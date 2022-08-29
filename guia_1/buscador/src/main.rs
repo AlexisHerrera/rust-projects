@@ -1,13 +1,9 @@
 use std::fs;
-use std::fs::File;
-use std::io::Read;
 
-fn main() -> std::io::Result<()> {
-    for file_dir in fs::read_dir("./documentos").unwrap() {
-        let mut f = File::open(file_dir.unwrap().path().as_path())?;
-        let mut contents = String::new();
-        f.read_to_string(&mut contents)?;
-        println!("{}", contents);
-    }
-    Ok(())
+mod repositorio_terminos;
+
+fn main() {
+    let directorio_fuente = fs::read_dir("./documentos").unwrap();
+    let mut repositorio_terminos = repositorio_terminos::RepositorioTerminos::new(directorio_fuente);
+    repositorio_terminos.obtener_termino();
 }
