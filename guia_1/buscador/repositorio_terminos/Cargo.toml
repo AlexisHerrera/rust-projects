@@ -1,9 +1,9 @@
 [package]
-name = "buscador"
+name = "repositorio_terminos"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-repositorio_terminos = {path = "./repositorio_terminos"}
+repositorio_lineas = {path = "../repositorio_lineas"}
