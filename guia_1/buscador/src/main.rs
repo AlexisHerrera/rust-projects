@@ -1,8 +1,8 @@
-use std::fs;
-
 use repositorio_terminos::*;
+
 fn main() {
-    let directorio_fuente = fs::read_dir("./documentos").unwrap();
-    let terminos = RepositorioTerminos::new().obtener_terminos(directorio_fuente);
-    println!("terminos: {:?}", terminos);
+    let terminos = RepositorioTerminos::new("./documentos")
+                                            .obtener_terminos()
+                                            .expect("No se pudo leer alguno de los archivos");
+    println!("{:?}", terminos);
 }
