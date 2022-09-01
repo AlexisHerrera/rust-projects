@@ -1,30 +1,78 @@
 use std::{fs::{ReadDir, File, DirEntry}};
 
 const STOP_WORDS: &[&str] = &["la", "las", "lo", "los", "el"];
-pub struct RepositorioTerminos {
-    dir_path : String
+pub struct RepositorioDocumentos {
+    directorio_fuente : ReadDir
 }
-impl RepositorioTerminos {
-    pub fn new(dir_path: &str) -> RepositorioTerminos {
-        RepositorioTerminos {
-            dir_path: dir_path.to_owned()
+
+#[derive(Debug)]
+pub struct Documento {
+    pub nombre: String,
+    pub terminos: Vec<String>
+}
+
+impl Documento {
+    pub fn new(nombre: String, terminos: Vec<String>) -> Documento {
+        Documento {
+            nombre,
+            terminos
+        }
+    }
+}
+
+pub enum DocumentoError {
+    NoHayDocumentos,
+    ErrorDeLectura
+}
+
+impl From<std::io::Error> for DocumentoError {
+    fn from(error: std::io::Error) -> Self {
+        DocumentoError::ErrorDeLectura
+    }
+}
+
+impl RepositorioDocumentos {
+    pub fn new(dir_path: &str) -> RepositorioDocumentos {
+        let directorio_fuente = obtener_directorio(dir_path).unwrap();
+        RepositorioDocumentos {
+            directorio_fuente : directorio_fuente
         }
     }
     // Decidí que solo se puede obtener TODOS los terminos o ninguno,
     // porque ir iterando sobre cada archivo además de overkill no tiene
     // mucho sentido ya que siempre voy a querer el contenido de TODOS los 
     // archivos. Eso si, asumo que los archivos pueden no entrar en memoria.
-    pub fn obtener_terminos(&self) -> Result<Vec<String>, std::io::Error> {
-        let directorio_fuente = obtener_directorio(&self.dir_path)?;
+    pub fn obtener_terminos(&mut self) -> Result<Vec<String>, std::io::Error> {
         let mut terminos : Vec<String> = vec![];
-        for file_dir in directorio_fuente {
-            let f = obtener_archivo(file_dir?)?;
+        loop {
+            let file_dir = match self.directorio_fuente.next() {
+                Some(f) => f,
+                None => {break;}
+            };
+            let f = obtener_archivo(&file_dir?)?;
             let terminos_archivo = obtener_terminos_de_archivo(f);
             for termino in terminos_archivo {
                 terminos.push(termino);
             }
         }
         Ok(terminos)
+    }
+
+    pub fn obtener_documento(&mut self) -> Result<Documento, self::DocumentoError> {
+        let file_dir = match self.directorio_fuente.next() {
+            Some(f) => f,
+            None => {return Err(self::DocumentoError::NoHayDocumentos)}
+        };
+        let dir_entry = file_dir?;
+
+        let f = obtener_archivo(&dir_entry)?;
+        let terminos = obtener_terminos_de_archivo(f);
+        
+        let nombre_archivo = match obtener_nombre_archivo(&dir_entry){
+            Ok(x) => x,
+            Err(_) => {return Err(self::DocumentoError::ErrorDeLectura)}
+        };
+        Ok(Documento{nombre: nombre_archivo, terminos: terminos})
     }
 }
 
@@ -35,8 +83,15 @@ fn obtener_directorio(dir_path: &str) -> Result<ReadDir, std::io::Error> {
 }
 
 /// Recibe un DirEntry (es lo que se obtiene al iterar un ReadDir)
-fn obtener_archivo(file_dir: DirEntry) -> Result<File, std::io::Error> {
+fn obtener_archivo(file_dir: &DirEntry) -> Result<File, std::io::Error> {
     File::open(file_dir.path().as_path())
+}
+
+fn obtener_nombre_archivo(dir_entry : &DirEntry) -> Result<String, std::io::Error> {
+    match dir_entry.file_name().into_string() {
+        Ok(x) => Ok(x),
+        Err(_) => {return Err(std::io::Error::new(std::io::ErrorKind::Other, "No se ha podido acceder al archivo"))}
+    }
 }
 
 use repositorio_lineas::*;
