@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use repositorio_documentos::RepositorioDocumentos;
-
+#[derive(Debug)]
 struct Buscador {
     corpus: HashMap<String, HashMap<String, i32>>
 }
@@ -30,10 +30,12 @@ impl Buscador {
         // }
     }
 
-    fn agregar_corpus(&self, termino: String, nombre_documento : String) {
-
+    fn agregar_corpus(&mut self, termino: String, nombre_documento : String) {
+        let hash_documentos_frecuencias = self.corpus.entry(termino).or_insert(HashMap::new());
+        hash_documentos_frecuencias.entry(nombre_documento)
+                                   .and_modify(|frecuencia| {*frecuencia += 1})
+                                   .or_insert( 1);
     }
-
 }
 
 #[cfg(test)]
@@ -47,14 +49,64 @@ mod tests_agregar_corpus {
 
     #[test]
     fn buscador_guarda_elemento_en_el_corpus() {
-        let buscador = Buscador::new();
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+
+        let corpus_esperado = HashMap::from([
+            ("casa".to_string(), HashMap::from([
+                ("doc1.txt".to_string(), 1)])
+            )]
+        );
+        
+        assert_eq!(buscador.corpus.len(), 1);
+        assert_eq!(buscador.corpus, corpus_esperado);
+    }
+
+    #[test]
+    fn buscador_guarda_repeticiones_en_el_corpus() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         
-        let mut corpus_esperado: HashMap<String, i32> = HashMap::new();
-        corpus_esperado.insert("doc1.txt".to_string(), 1);
-
+        
+        let corpus_esperado = HashMap::from([
+            ("casa".to_string(), HashMap::from([
+                ("doc1.txt".to_string(), 2)])
+            )]
+        );
+        
         assert_eq!(buscador.corpus.len(), 1);
-        assert_eq!(buscador.corpus.get(&"casa".to_string()), Some(&corpus_esperado));
+        assert_eq!(buscador.corpus, corpus_esperado);
+    }
+
+    #[test]
+    fn buscador_guarda_repeticiones_de_multiples_terminos() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("cielo".to_string(), "doc1.txt".to_string());
+        
+        buscador.agregar_corpus("casa".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("mar".to_string(), "doc2.txt".to_string());
+
+        
+        let corpus_esperado = HashMap::from([
+            ("casa".to_string(), HashMap::from([
+                ("doc1.txt".to_string(), 1),
+                ("doc2.txt".to_string(), 1),
+                ])
+            ),
+            ("cielo".to_string(), HashMap::from([
+                ("doc1.txt".to_string(), 1)
+                ])
+            ),
+            ("mar".to_string(), HashMap::from([
+                ("doc2.txt".to_string(), 1)
+                ])
+            ),
+            ]
+        );
+        
+        assert_eq!(buscador.corpus, corpus_esperado);
     }
 }
 
