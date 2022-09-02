@@ -1,20 +1,19 @@
+use core::num;
 use std::collections::HashMap;
 
 use repositorio_documentos::RepositorioDocumentos;
 #[derive(Debug)]
 pub struct Buscador {
     corpus: HashMap<String, HashMap<String, i32>>,
+    nombres_documentos: Vec<String>
 }
 
 impl Buscador {
     pub fn new() -> Buscador {
         Buscador {
             corpus: HashMap::new(),
+            nombres_documentos: Vec::new()
         }
-    }
-
-    fn inyectar_corpus(&mut self, corpus: HashMap<String, HashMap<String, i32>>) {
-        self.corpus = corpus;
     }
 
     pub fn cargar_documentos(&mut self, mut repositorio_documentos: RepositorioDocumentos) {
@@ -35,6 +34,9 @@ impl Buscador {
     }
 
     fn agregar_corpus(&mut self, termino: String, nombre_documento: String) {
+        if !self.nombres_documentos.contains(&nombre_documento) {
+            self.nombres_documentos.push(nombre_documento.clone());
+        }
         let hash_documentos_frecuencias = self.corpus.entry(termino).or_insert_with(HashMap::new);
         hash_documentos_frecuencias
             .entry(nombre_documento)
@@ -44,8 +46,25 @@ impl Buscador {
 
     /// Se utiliza el idf(t, D) = log(|D|/ |{d pertenece D: t pertenece d}|) (variante clasica)
     fn obtener_idf(&self, termino: &str) -> f32 {
-        0.0
+        let numerador = self.cantidad_documentos();
+        let divisor = self.cantidad_documentos_que_tienen_el_termino(termino);
+        if numerador == 0 || divisor == 0 {
+            return 0.0;
+        }
+        ((numerador as f32 / divisor as f32)).log10()
     }
+
+    fn cantidad_documentos(&self) -> usize {
+        self.nombres_documentos.len()
+    }
+
+    fn cantidad_documentos_que_tienen_el_termino(&self, termino: &str) -> usize {
+        match self.corpus.get(termino) {
+            Some(hash_terminos) => hash_terminos.len(),
+            None => 0,
+        }
+    }
+
 }
 
 #[cfg(test)]
@@ -112,6 +131,44 @@ mod tests_agregar_corpus {
 
         assert_eq!(buscador.corpus, corpus_esperado);
     }
+    #[test]
+    fn si_no_se_cargan_documentos_es_0_la_cantidad_de_documentos() {
+        let buscador = Buscador::new();
+        assert_eq!(buscador.cantidad_documentos(), 0);
+    }
+
+    #[test]
+    fn si_se_carga_1_documento_es_1_la_cantidad_de_documentos() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        
+        assert_eq!(buscador.cantidad_documentos(), 1);
+    }
+
+    #[test]
+    fn si_se_carga_1_documento_y_muchos_terminos_solo_hay_1_documento() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("cielo".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("mar".to_string(), "doc1.txt".to_string());
+        
+        assert_eq!(buscador.cantidad_documentos(), 1);
+    }
+
+    #[test]
+    fn se_cargan_muchos_documentos_con_varios_terminos_cuentan_sin_repetir() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("cielo".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("mar".to_string(), "doc1.txt".to_string());
+        
+        buscador.agregar_corpus("paz".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("amor".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("mar".to_string(), "doc2.txt".to_string());
+
+
+        assert_eq!(buscador.cantidad_documentos(), 2);
+    }
 }
 
 mod test_calculo_puntajes {
@@ -125,17 +182,14 @@ mod test_calculo_puntajes {
     fn si_el_corpus_no_tiene_un_termino_idf_vale_0() {
         let buscador = Buscador::new();
         let termino_busqueda = "un-termino-que-no-existe";
-        assert_eq!(buscador.obtener_idf(termino_busqueda), calcular_idf(0.0, 0.0));
+        assert_eq!(buscador.obtener_idf(termino_busqueda), 0.0);
     }
 
     #[test]
     fn si_el_corpus_no_tiene_un_solo_documento_con_1_solo_termino_devuelve_0() {
         let mut buscador = Buscador::new();
-        let corpus  = HashMap::from([(
-            "casa".to_string(),
-            HashMap::from([("doc1.txt".to_string(), 1)]),
-        )]);
-        buscador.inyectar_corpus(corpus);
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+
         let termino_busqueda = "casa";
         assert_eq!(buscador.obtener_idf(termino_busqueda), calcular_idf(1.0, 1.0));
     }
@@ -144,13 +198,10 @@ mod test_calculo_puntajes {
     #[test]
     fn si_el_corpus_no_tiene_2_documentos_con_distintos_terminos() {
         let mut buscador = Buscador::new();
-        let corpus  = HashMap::from([(
-            "casa".to_string(),
-            HashMap::from([("doc1.txt".to_string(), 1)]),
-            "cielo".to_string(),
-            HashMap::from([("doc2.txt".to_string(), 1)]),
-        )]);
-        buscador.inyectar_corpus(corpus);
+
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("cielo".to_string(), "doc2.txt".to_string());
+
         let termino_busqueda = "casa";
         assert_eq!(buscador.obtener_idf(termino_busqueda), calcular_idf(2.0, 1.0));
     }
