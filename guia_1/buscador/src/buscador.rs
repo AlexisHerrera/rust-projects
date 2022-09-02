@@ -73,6 +73,10 @@ impl Buscador {
         0
     }
 
+    fn obtener_tf_idf(&self, termino: &str, nombre_documento: &str) -> f32 {
+        self.obtener_tf(termino, nombre_documento) as f32 *self.obtener_idf(termino)
+    }
+
 }
 
 #[cfg(test)]
@@ -264,6 +268,42 @@ mod test_calculo_tf_clasico {
         assert_eq!(buscador.obtener_tf(termino_busqueda, nombre_documento), 3);
     }
 }
+
+mod calcular_tf_idf {
+    use super::*;
+    fn calcular_idf(cantidad_documentos : f32, cantidad_de_documentos_en_que_t_aparece: f32) -> f32 {
+        (cantidad_documentos/cantidad_de_documentos_en_que_t_aparece).log10()
+    }
+    #[test]
+    fn calcula_tf_idf_a_0_si_no_existe_el_termino() {
+        let buscador = Buscador::new();
+
+        let termino_busqueda = "casa";
+        let nombre_documento = "doc1.txt";
+
+        assert_eq!(buscador.obtener_tf_idf(termino_busqueda, nombre_documento), 0.0);
+    }
+
+    #[test]
+    fn calcula_tf_idf_de_un_termino_y_documentos_existentes() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        
+        buscador.agregar_corpus("casa".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("amor".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("amor".to_string(), "doc2.txt".to_string());
+
+
+
+        let termino_busqueda = "casa";
+        let nombre_documento = "doc1.txt";
+
+        assert_eq!(buscador.obtener_tf_idf(termino_busqueda, nombre_documento), 3.0*calcular_idf(2.0, 2.0));
+    }
+}
+
 
 // Quedan hacer dos cosas,
 // 1. calcular el tf de los terminos (es decir la cantidad de veces que aparecen en los documentos)
