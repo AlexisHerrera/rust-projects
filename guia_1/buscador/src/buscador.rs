@@ -7,6 +7,20 @@ pub struct Buscador {
     nombres_documentos: Vec<String>
 }
 
+pub struct DocumentoPuntaje {
+    nombre_documento: String,
+    puntaje: f32
+}
+
+impl DocumentoPuntaje {
+    fn new(nombre_documento: String, puntaje: f32) -> DocumentoPuntaje {
+        DocumentoPuntaje {
+            nombre_documento,
+            puntaje
+        }
+    }
+}
+
 impl Buscador {
     pub fn new() -> Buscador {
         Buscador {
@@ -43,9 +57,9 @@ impl Buscador {
             .or_insert(1);
     }
 
-    /// Se utiliza el idf(t, D) = log(|D|/ |{d pertenece D: t pertenece d}|) (variante clasica)
+    /// Se utiliza el idf(t, D) = log(|D| + 1 / |{d pertenece D: t pertenece d}|) (variante custom)
     fn obtener_idf(&self, termino: &str) -> f32 {
-        let numerador = self.cantidad_documentos();
+        let numerador = self.cantidad_documentos() + 1;
         let divisor = self.cantidad_documentos_que_tienen_el_termino(termino);
         if numerador == 0 || divisor == 0 {
             return 0.0;
@@ -75,6 +89,22 @@ impl Buscador {
 
     fn obtener_tf_idf(&self, termino: &str, nombre_documento: &str) -> f32 {
         self.obtener_tf(termino, nombre_documento) as f32 *self.obtener_idf(termino)
+    }
+
+    pub fn realizar_busqueda(&self, terminos: &Vec<String>) -> Vec<DocumentoPuntaje> {
+        let mut resultado = vec![];
+        
+        for nombre_documento in &self.nombres_documentos {
+            let mut puntaje_documento = 0.0;
+            for termino in terminos {
+                puntaje_documento += self.obtener_tf_idf(termino, nombre_documento);
+            }
+            if puntaje_documento == 0.0 {
+                continue;
+            }
+            resultado.push(DocumentoPuntaje::new((*nombre_documento).clone(), puntaje_documento));
+        }
+        resultado
     }
 
 }
@@ -183,11 +213,11 @@ mod tests_agregar_corpus {
     }
 }
 
-mod test_calculo_idf_clasico {
+mod test_calculo_idf_custom {
     use super::*;
     
-    fn calcular_idf(cantidad_documentos : f32, cantidad_de_documentos_en_que_t_aparece: f32) -> f32 {
-        (cantidad_documentos/cantidad_de_documentos_en_que_t_aparece).log10()
+    fn calcular_idf_custom(cantidad_documentos : f32, cantidad_de_documentos_en_que_t_aparece: f32) -> f32 {
+        ((cantidad_documentos + 1.0 )/cantidad_de_documentos_en_que_t_aparece).log10()
     }
     
     #[test]
@@ -203,7 +233,7 @@ mod test_calculo_idf_clasico {
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
 
         let termino_busqueda = "casa";
-        assert_eq!(buscador.obtener_idf(termino_busqueda), calcular_idf(1.0, 1.0));
+        assert_eq!(buscador.obtener_idf(termino_busqueda), calcular_idf_custom(1.0, 1.0));
     }
 
 
@@ -215,7 +245,7 @@ mod test_calculo_idf_clasico {
         buscador.agregar_corpus("cielo".to_string(), "doc2.txt".to_string());
 
         let termino_busqueda = "casa";
-        assert_eq!(buscador.obtener_idf(termino_busqueda), calcular_idf(2.0, 1.0));
+        assert_eq!(buscador.obtener_idf(termino_busqueda), calcular_idf_custom(2.0, 1.0));
     }
 
 }
@@ -271,8 +301,8 @@ mod test_calculo_tf_clasico {
 
 mod calcular_tf_idf {
     use super::*;
-    fn calcular_idf(cantidad_documentos : f32, cantidad_de_documentos_en_que_t_aparece: f32) -> f32 {
-        (cantidad_documentos/cantidad_de_documentos_en_que_t_aparece).log10()
+    fn calcular_idf_custom(cantidad_documentos : f32, cantidad_de_documentos_en_que_t_aparece: f32) -> f32 {
+        ((cantidad_documentos + 1.0 )/cantidad_de_documentos_en_que_t_aparece).log10()
     }
     #[test]
     fn calcula_tf_idf_a_0_si_no_existe_el_termino() {
@@ -300,11 +330,57 @@ mod calcular_tf_idf {
         let termino_busqueda = "casa";
         let nombre_documento = "doc1.txt";
 
-        assert_eq!(buscador.obtener_tf_idf(termino_busqueda, nombre_documento), 3.0*calcular_idf(2.0, 2.0));
+        assert_eq!(buscador.obtener_tf_idf(termino_busqueda, nombre_documento), 3.0*calcular_idf_custom(2.0, 2.0));
     }
+}
+
+mod realizar_busqueda {
+    use super::*;
+    
+    #[test]
+    fn busqueda_de_termino_que_no_esta_en_documentos_no_devuelve_resultados() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("parque".to_string(), "doc2.txt".to_string());
+
+        let termino_busqueda = vec!["unicornio".to_string()];
+        assert!(buscador.realizar_busqueda(&termino_busqueda).is_empty());
+        
+    }
+
+    #[test]
+    fn busqueda_de_termino_que_solo_esta_en_un_documento_devuelve_el_nombre_del_documento() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("parque".to_string(), "doc2.txt".to_string());
+
+        let termino_busqueda = vec!["casa".to_string()];
+        let resultado_busqueda = buscador.realizar_busqueda(&termino_busqueda);
+        assert_eq!(resultado_busqueda.len(), 1);
+        assert_eq!(resultado_busqueda[0].nombre_documento, "doc1.txt");
+    }
+
+    #[test]
+    fn busqueda_de_termino_que_esta_en_un_documento_muchas_veces_y_en_otro_solo_1_vez() {
+        let mut buscador = Buscador::new();
+        // Tiene que ganar por el tf
+        for _ in 0..10 {
+            buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        }
+        
+        buscador.agregar_corpus("casa".to_string(), "doc2.txt".to_string());
+
+        let termino_busqueda = vec!["casa".to_string()];
+        let resultado_busqueda = buscador.realizar_busqueda(&termino_busqueda);
+        assert_eq!(resultado_busqueda.len(), 2);
+        assert_eq!(resultado_busqueda[0].nombre_documento, "doc1.txt");
+        assert_eq!(resultado_busqueda[1].nombre_documento, "doc2.txt");
+    }
+
 }
 
 
 // Quedan hacer dos cosas,
 // 1. calcular el tf de los terminos (es decir la cantidad de veces que aparecen en los documentos)
 // 2. Realizar la consulta y calcular los tf idf y rankearlos
+// 3. Pregunta: cuando se devuelve el resultado desde un objeto (en este caso el buscador)
