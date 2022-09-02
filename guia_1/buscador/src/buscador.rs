@@ -1,4 +1,3 @@
-use core::num;
 use std::collections::HashMap;
 
 use repositorio_documentos::RepositorioDocumentos;
@@ -63,6 +62,15 @@ impl Buscador {
             Some(hash_terminos) => hash_terminos.len(),
             None => 0,
         }
+    }
+
+    fn obtener_tf(&self, termino: &str, nombre_documento: &str) -> i32 {
+        if let Some(hash_documentos_frecuencia) = self.corpus.get(termino) {
+            if let Some(frecuencia) = hash_documentos_frecuencia.get(nombre_documento) {
+                return *frecuencia;
+            }
+        }
+        0
     }
 
 }
@@ -171,7 +179,7 @@ mod tests_agregar_corpus {
     }
 }
 
-mod test_calculo_puntajes {
+mod test_calculo_idf_clasico {
     use super::*;
     
     fn calcular_idf(cantidad_documentos : f32, cantidad_de_documentos_en_que_t_aparece: f32) -> f32 {
@@ -207,4 +215,56 @@ mod test_calculo_puntajes {
     }
 
 }
-// Documentos es parecido a un File que tiene los metodos nombre, obtener_termino
+
+mod test_calculo_tf_clasico {
+    use super::*;
+    #[test]
+    fn si_no_existe_el_termino_en_el_corpus_el_tf_es_0() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("otrotermino".to_string(), "doc1.txt".to_string());
+        
+        let termino_busqueda = "casa";
+        let nombre_documento = "doc1.txt";
+
+        assert_eq!(buscador.obtener_tf(termino_busqueda, nombre_documento), 0);
+    }
+
+    #[test]
+    fn si_existe_el_termino_en_el_corpus_pero_no_es_del_documento_buscado_el_tf_es_0() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        
+        let termino_busqueda = "casa";
+        let nombre_documento = "doc2.txt";
+
+        assert_eq!(buscador.obtener_tf(termino_busqueda, nombre_documento), 0);
+    }
+
+    #[test]
+    fn si_existe_el_termino_en_el_corpus_y_es_el_documento_buscado_el_tf_es_la_frecuencia() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        
+        let termino_busqueda = "casa";
+        let nombre_documento = "doc1.txt";
+
+        assert_eq!(buscador.obtener_tf(termino_busqueda, nombre_documento), 1);
+    }
+
+    #[test]
+    fn obtiene_la_frecuencia_si_se_agrego_muchas_veces() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        
+        let termino_busqueda = "casa";
+        let nombre_documento = "doc1.txt";
+
+        assert_eq!(buscador.obtener_tf(termino_busqueda, nombre_documento), 3);
+    }
+}
+
+// Quedan hacer dos cosas,
+// 1. calcular el tf de los terminos (es decir la cantidad de veces que aparecen en los documentos)
+// 2. Realizar la consulta y calcular los tf idf y rankearlos
