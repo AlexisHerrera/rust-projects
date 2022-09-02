@@ -12,3 +12,4 @@ Lamentablemente no fueron tan sencillas como para tomarme el tiempo de hacerlo.
 3. Por temas de tiempo, no voy a implementar una forma linda de obtener los terminos del documento en función de mantenerlo genérico.
 Una forma linda sería buffereando los terminos con un vector, hacer getlines on demand, etc.
 
+4. Utilice como base para corroborar un parcial de tf-idf que hice en orga de datos. Ver [aqui](parcial_tf-idf.pdf)
