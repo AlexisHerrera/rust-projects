@@ -20,7 +20,7 @@ impl DocumentoPuntaje {
         }
     }
 }
-
+use repositorio_documentos::linea_a_terminos;
 impl Buscador {
     pub fn new() -> Buscador {
         Buscador {
@@ -91,7 +91,7 @@ impl Buscador {
         self.obtener_tf(termino, nombre_documento) as f32 *self.obtener_idf(termino)
     }
 
-    pub fn realizar_busqueda(&self, terminos: &Vec<String>) -> Vec<DocumentoPuntaje> {
+    fn realizar_busqueda_terminos(&self, terminos: &Vec<String>) -> Vec<DocumentoPuntaje> {
         let mut resultado = vec![];
         
         for nombre_documento in &self.nombres_documentos {
@@ -105,6 +105,12 @@ impl Buscador {
             resultado.push(DocumentoPuntaje::new((*nombre_documento).clone(), puntaje_documento));
         }
         resultado
+    }
+
+    // Modificar esto para que no haga la copia
+    pub fn realizar_busqueda(&self, input_linea: &str) -> Vec<DocumentoPuntaje> {
+        let terminos = linea_a_terminos(input_linea.trim());
+        self.realizar_busqueda_terminos(&terminos)
     }
 
 }
@@ -334,7 +340,7 @@ mod calcular_tf_idf {
     }
 }
 
-mod realizar_busqueda {
+mod realizar_busqueda_terminos {
     use super::*;
     
     #[test]
@@ -344,7 +350,7 @@ mod realizar_busqueda {
         buscador.agregar_corpus("parque".to_string(), "doc2.txt".to_string());
 
         let termino_busqueda = vec!["unicornio".to_string()];
-        assert!(buscador.realizar_busqueda(&termino_busqueda).is_empty());
+        assert!(buscador.realizar_busqueda_terminos(&termino_busqueda).is_empty());
         
     }
 
@@ -355,12 +361,11 @@ mod realizar_busqueda {
         buscador.agregar_corpus("parque".to_string(), "doc2.txt".to_string());
 
         let termino_busqueda = vec!["casa".to_string()];
-        let resultado_busqueda = buscador.realizar_busqueda(&termino_busqueda);
+        let resultado_busqueda = buscador.realizar_busqueda_terminos(&termino_busqueda);
         assert_eq!(resultado_busqueda.len(), 1);
         assert_eq!(resultado_busqueda[0].nombre_documento, "doc1.txt");
     }
 
-    #[test]
     fn busqueda_de_termino_que_esta_en_un_documento_muchas_veces_y_en_otro_solo_1_vez() {
         let mut buscador = Buscador::new();
         // Tiene que ganar por el tf
@@ -371,14 +376,69 @@ mod realizar_busqueda {
         buscador.agregar_corpus("casa".to_string(), "doc2.txt".to_string());
 
         let termino_busqueda = vec!["casa".to_string()];
-        let resultado_busqueda = buscador.realizar_busqueda(&termino_busqueda);
+        let resultado_busqueda = buscador.realizar_busqueda_terminos(&termino_busqueda);
         assert_eq!(resultado_busqueda.len(), 2);
         assert_eq!(resultado_busqueda[0].nombre_documento, "doc1.txt");
         assert_eq!(resultado_busqueda[1].nombre_documento, "doc2.txt");
     }
+    #[test]
+    fn busqueda_con_multiples_terminos() {
+        let mut buscador = Buscador::new();
+        // Tiene que ganar por el idf
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("auto".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("mar".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("feliz".to_string(), "doc1.txt".to_string());
 
+        buscador.agregar_corpus("casa".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("oceano".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("triste".to_string(), "doc2.txt".to_string());
+
+        let termino_busqueda = vec!["casa".to_string(), "auto".to_string(), "mar".to_string()];
+        let resultado_busqueda = buscador.realizar_busqueda_terminos(&termino_busqueda);
+        assert_eq!(resultado_busqueda.len(), 2);
+        assert_eq!(resultado_busqueda[0].nombre_documento, "doc1.txt");
+        assert_eq!(resultado_busqueda[1].nombre_documento, "doc2.txt");
+    }
 }
 
+mod realizar_busqueda_publica {
+    use super::*;
+    #[test]
+    fn busqueda_ignora_stop_words() {
+        let mut buscador = Buscador::new();
+        // En principio esto no sería posible porque al agregar al corpus
+        // tampoco aparecen
+        buscador.agregar_corpus("la".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("las".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("lo".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("los".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("el".to_string(), "doc1.txt".to_string());
+
+        buscador.agregar_corpus("la".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("las".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("lo".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("los".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("el".to_string(), "doc2.txt".to_string());
+
+
+        let input_busqueda = "el la la lo los el lo\n";
+        
+        assert!(buscador.realizar_busqueda(input_busqueda).is_empty());
+    }
+
+    #[test]
+    fn realiza_busqueda_comun() {
+        let mut buscador = Buscador::new();
+        buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
+        buscador.agregar_corpus("parque".to_string(), "doc2.txt".to_string());
+
+
+        let resultado_busqueda = buscador.realizar_busqueda("casa\n");
+        assert_eq!(resultado_busqueda.len(), 1);
+        assert_eq!(resultado_busqueda[0].nombre_documento, "doc1.txt");
+    }
+}
 
 // Quedan hacer dos cosas,
 // 1. calcular el tf de los terminos (es decir la cantidad de veces que aparecen en los documentos)
