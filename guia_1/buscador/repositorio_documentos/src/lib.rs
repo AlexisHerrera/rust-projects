@@ -26,7 +26,7 @@ pub enum DocumentoError {
 }
 
 impl From<std::io::Error> for DocumentoError {
-    fn from(error: std::io::Error) -> Self {
+    fn from(_error: std::io::Error) -> Self {
         DocumentoError::ErrorDeLectura
     }
 }
