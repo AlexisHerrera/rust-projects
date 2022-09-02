@@ -4,19 +4,20 @@ use repositorio_documentos::RepositorioDocumentos;
 #[derive(Debug)]
 pub struct Buscador {
     corpus: HashMap<String, HashMap<String, i32>>,
-    nombres_documentos: Vec<String>
+    nombres_documentos: Vec<String>,
 }
 
+#[derive(Debug)]
 pub struct DocumentoPuntaje {
-    nombre_documento: String,
-    puntaje: f32
+    pub nombre_documento: String,
+    pub puntaje: f32,
 }
 
 impl DocumentoPuntaje {
     fn new(nombre_documento: String, puntaje: f32) -> DocumentoPuntaje {
         DocumentoPuntaje {
             nombre_documento,
-            puntaje
+            puntaje,
         }
     }
 }
@@ -25,7 +26,7 @@ impl Buscador {
     pub fn new() -> Buscador {
         Buscador {
             corpus: HashMap::new(),
-            nombres_documentos: Vec::new()
+            nombres_documentos: Vec::new(),
         }
     }
 
@@ -64,7 +65,7 @@ impl Buscador {
         if numerador == 0 || divisor == 0 {
             return 0.0;
         }
-        ((numerador as f32 / divisor as f32)).log10()
+        (numerador as f32 / divisor as f32).log10()
     }
 
     fn cantidad_documentos(&self) -> usize {
@@ -88,12 +89,12 @@ impl Buscador {
     }
 
     fn obtener_tf_idf(&self, termino: &str, nombre_documento: &str) -> f32 {
-        self.obtener_tf(termino, nombre_documento) as f32 *self.obtener_idf(termino)
+        self.obtener_tf(termino, nombre_documento) as f32 * self.obtener_idf(termino)
     }
 
     fn realizar_busqueda_terminos(&self, terminos: &Vec<String>) -> Vec<DocumentoPuntaje> {
         let mut resultado = vec![];
-        
+
         for nombre_documento in &self.nombres_documentos {
             let mut puntaje_documento = 0.0;
             for termino in terminos {
@@ -102,8 +103,12 @@ impl Buscador {
             if puntaje_documento == 0.0 {
                 continue;
             }
-            resultado.push(DocumentoPuntaje::new((*nombre_documento).clone(), puntaje_documento));
+            resultado.push(DocumentoPuntaje::new(
+                (*nombre_documento).clone(),
+                puntaje_documento,
+            ));
         }
+        resultado.sort_by(|a, b| b.puntaje.partial_cmp(&a.puntaje).unwrap());
         resultado
     }
 
@@ -112,7 +117,6 @@ impl Buscador {
         let terminos = linea_a_terminos(input_linea.trim());
         self.realizar_busqueda_terminos(&terminos)
     }
-
 }
 
 #[cfg(test)]
@@ -189,7 +193,7 @@ mod tests_agregar_corpus {
     fn si_se_carga_1_documento_es_1_la_cantidad_de_documentos() {
         let mut buscador = Buscador::new();
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
-        
+
         assert_eq!(buscador.cantidad_documentos(), 1);
     }
 
@@ -199,7 +203,7 @@ mod tests_agregar_corpus {
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("cielo".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("mar".to_string(), "doc1.txt".to_string());
-        
+
         assert_eq!(buscador.cantidad_documentos(), 1);
     }
 
@@ -209,23 +213,26 @@ mod tests_agregar_corpus {
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("cielo".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("mar".to_string(), "doc1.txt".to_string());
-        
+
         buscador.agregar_corpus("paz".to_string(), "doc2.txt".to_string());
         buscador.agregar_corpus("amor".to_string(), "doc2.txt".to_string());
         buscador.agregar_corpus("mar".to_string(), "doc2.txt".to_string());
-
 
         assert_eq!(buscador.cantidad_documentos(), 2);
     }
 }
 
+#[cfg(test)]
 mod test_calculo_idf_custom {
     use super::*;
-    
-    fn calcular_idf_custom(cantidad_documentos : f32, cantidad_de_documentos_en_que_t_aparece: f32) -> f32 {
-        ((cantidad_documentos + 1.0 )/cantidad_de_documentos_en_que_t_aparece).log10()
+
+    fn calcular_idf_custom(
+        cantidad_documentos: f32,
+        cantidad_de_documentos_en_que_t_aparece: f32,
+    ) -> f32 {
+        ((cantidad_documentos + 1.0) / cantidad_de_documentos_en_que_t_aparece).log10()
     }
-    
+
     #[test]
     fn si_el_corpus_no_tiene_un_termino_idf_vale_0() {
         let buscador = Buscador::new();
@@ -239,9 +246,11 @@ mod test_calculo_idf_custom {
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
 
         let termino_busqueda = "casa";
-        assert_eq!(buscador.obtener_idf(termino_busqueda), calcular_idf_custom(1.0, 1.0));
+        assert_eq!(
+            buscador.obtener_idf(termino_busqueda),
+            calcular_idf_custom(1.0, 1.0)
+        );
     }
-
 
     #[test]
     fn si_el_corpus_no_tiene_2_documentos_con_distintos_terminos() {
@@ -251,18 +260,21 @@ mod test_calculo_idf_custom {
         buscador.agregar_corpus("cielo".to_string(), "doc2.txt".to_string());
 
         let termino_busqueda = "casa";
-        assert_eq!(buscador.obtener_idf(termino_busqueda), calcular_idf_custom(2.0, 1.0));
+        assert_eq!(
+            buscador.obtener_idf(termino_busqueda),
+            calcular_idf_custom(2.0, 1.0)
+        );
     }
-
 }
 
+#[cfg(test)]
 mod test_calculo_tf_clasico {
     use super::*;
     #[test]
     fn si_no_existe_el_termino_en_el_corpus_el_tf_es_0() {
         let mut buscador = Buscador::new();
         buscador.agregar_corpus("otrotermino".to_string(), "doc1.txt".to_string());
-        
+
         let termino_busqueda = "casa";
         let nombre_documento = "doc1.txt";
 
@@ -273,7 +285,7 @@ mod test_calculo_tf_clasico {
     fn si_existe_el_termino_en_el_corpus_pero_no_es_del_documento_buscado_el_tf_es_0() {
         let mut buscador = Buscador::new();
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
-        
+
         let termino_busqueda = "casa";
         let nombre_documento = "doc2.txt";
 
@@ -284,7 +296,7 @@ mod test_calculo_tf_clasico {
     fn si_existe_el_termino_en_el_corpus_y_es_el_documento_buscado_el_tf_es_la_frecuencia() {
         let mut buscador = Buscador::new();
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
-        
+
         let termino_busqueda = "casa";
         let nombre_documento = "doc1.txt";
 
@@ -297,7 +309,7 @@ mod test_calculo_tf_clasico {
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
-        
+
         let termino_busqueda = "casa";
         let nombre_documento = "doc1.txt";
 
@@ -305,10 +317,15 @@ mod test_calculo_tf_clasico {
     }
 }
 
+#[cfg(test)]
 mod calcular_tf_idf {
     use super::*;
-    fn calcular_idf_custom(cantidad_documentos : f32, cantidad_de_documentos_en_que_t_aparece: f32) -> f32 {
-        ((cantidad_documentos + 1.0 )/cantidad_de_documentos_en_que_t_aparece).log10()
+    #[cfg(test)]
+    fn calcular_idf_custom(
+        cantidad_documentos: f32,
+        cantidad_de_documentos_en_que_t_aparece: f32,
+    ) -> f32 {
+        ((cantidad_documentos + 1.0) / cantidad_de_documentos_en_que_t_aparece).log10()
     }
     #[test]
     fn calcula_tf_idf_a_0_si_no_existe_el_termino() {
@@ -317,7 +334,10 @@ mod calcular_tf_idf {
         let termino_busqueda = "casa";
         let nombre_documento = "doc1.txt";
 
-        assert_eq!(buscador.obtener_tf_idf(termino_busqueda, nombre_documento), 0.0);
+        assert_eq!(
+            buscador.obtener_tf_idf(termino_busqueda, nombre_documento),
+            0.0
+        );
     }
 
     #[test]
@@ -326,23 +346,25 @@ mod calcular_tf_idf {
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
-        
+
         buscador.agregar_corpus("casa".to_string(), "doc2.txt".to_string());
         buscador.agregar_corpus("amor".to_string(), "doc2.txt".to_string());
         buscador.agregar_corpus("amor".to_string(), "doc2.txt".to_string());
 
-
-
         let termino_busqueda = "casa";
         let nombre_documento = "doc1.txt";
 
-        assert_eq!(buscador.obtener_tf_idf(termino_busqueda, nombre_documento), 3.0*calcular_idf_custom(2.0, 2.0));
+        assert_eq!(
+            buscador.obtener_tf_idf(termino_busqueda, nombre_documento),
+            3.0 * calcular_idf_custom(2.0, 2.0)
+        );
     }
 }
 
+#[cfg(test)]
 mod realizar_busqueda_terminos {
     use super::*;
-    
+
     #[test]
     fn busqueda_de_termino_que_no_esta_en_documentos_no_devuelve_resultados() {
         let mut buscador = Buscador::new();
@@ -350,8 +372,9 @@ mod realizar_busqueda_terminos {
         buscador.agregar_corpus("parque".to_string(), "doc2.txt".to_string());
 
         let termino_busqueda = vec!["unicornio".to_string()];
-        assert!(buscador.realizar_busqueda_terminos(&termino_busqueda).is_empty());
-        
+        assert!(buscador
+            .realizar_busqueda_terminos(&termino_busqueda)
+            .is_empty());
     }
 
     #[test]
@@ -366,13 +389,14 @@ mod realizar_busqueda_terminos {
         assert_eq!(resultado_busqueda[0].nombre_documento, "doc1.txt");
     }
 
+    #[test]
     fn busqueda_de_termino_que_esta_en_un_documento_muchas_veces_y_en_otro_solo_1_vez() {
         let mut buscador = Buscador::new();
         // Tiene que ganar por el tf
         for _ in 0..10 {
             buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         }
-        
+
         buscador.agregar_corpus("casa".to_string(), "doc2.txt".to_string());
 
         let termino_busqueda = vec!["casa".to_string()];
@@ -384,15 +408,16 @@ mod realizar_busqueda_terminos {
     #[test]
     fn busqueda_con_multiples_terminos() {
         let mut buscador = Buscador::new();
+
+        buscador.agregar_corpus("casa".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("oceano".to_string(), "doc2.txt".to_string());
+        buscador.agregar_corpus("triste".to_string(), "doc2.txt".to_string());
+
         // Tiene que ganar por el idf
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("auto".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("mar".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("feliz".to_string(), "doc1.txt".to_string());
-
-        buscador.agregar_corpus("casa".to_string(), "doc2.txt".to_string());
-        buscador.agregar_corpus("oceano".to_string(), "doc2.txt".to_string());
-        buscador.agregar_corpus("triste".to_string(), "doc2.txt".to_string());
 
         let termino_busqueda = vec!["casa".to_string(), "auto".to_string(), "mar".to_string()];
         let resultado_busqueda = buscador.realizar_busqueda_terminos(&termino_busqueda);
@@ -402,6 +427,7 @@ mod realizar_busqueda_terminos {
     }
 }
 
+#[cfg(test)]
 mod realizar_busqueda_publica {
     use super::*;
     #[test]
@@ -421,9 +447,8 @@ mod realizar_busqueda_publica {
         buscador.agregar_corpus("los".to_string(), "doc2.txt".to_string());
         buscador.agregar_corpus("el".to_string(), "doc2.txt".to_string());
 
-
         let input_busqueda = "el la la lo los el lo\n";
-        
+
         assert!(buscador.realizar_busqueda(input_busqueda).is_empty());
     }
 
@@ -433,14 +458,8 @@ mod realizar_busqueda_publica {
         buscador.agregar_corpus("casa".to_string(), "doc1.txt".to_string());
         buscador.agregar_corpus("parque".to_string(), "doc2.txt".to_string());
 
-
         let resultado_busqueda = buscador.realizar_busqueda("casa\n");
         assert_eq!(resultado_busqueda.len(), 1);
         assert_eq!(resultado_busqueda[0].nombre_documento, "doc1.txt");
     }
 }
-
-// Quedan hacer dos cosas,
-// 1. calcular el tf de los terminos (es decir la cantidad de veces que aparecen en los documentos)
-// 2. Realizar la consulta y calcular los tf idf y rankearlos
-// 3. Pregunta: cuando se devuelve el resultado desde un objeto (en este caso el buscador)
