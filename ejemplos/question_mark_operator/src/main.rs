@@ -6,7 +6,7 @@ fn try_to_parse() -> Result<i32, ParseIntError> {
     Ok(x + y)                    // Doesn't run.
 }
 
-fn main() {
+fn main3() {
     let res = try_to_parse();
     println!("{:?}", res);
 }
@@ -31,7 +31,7 @@ impl From<io::Error> for AppError {
     }
 }
 
-fn main2() -> Result<(), AppError> {
+fn main() -> Result<(), AppError> {
     let _file = File::open("nonexistent_file.txt")?; // This generates an io::Error. But because of return type is Result<(), AppError>, it converts to AppError
 
     Ok(())
