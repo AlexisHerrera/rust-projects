@@ -1,10 +1,8 @@
-//! Voy a suponer que se quiere que se quiere que el balance de 0.
-//! Por ejemplo posibles alternativas de ejecuciones:
-//! - +40 -30 +60 -70
-//! - +40 +60 -30 -70
-//! - +60 +40 -30 -70
-//! - +60 +40 -70 -30
-//! etc, siempre que el balance parcial sea mayor a 0.
+//! El resultado de la ejecución es que el balance parcial sea mayor a 0
+//! Este programa no va a realizar un panic
+//! Puede que algunas operaciones de retiro no se puedan ejecutar
+//! (se podría cambiar el panic por un error propio)
+
 use std::{thread, sync::{Arc, RwLock}};
 
 struct Account(i32);
