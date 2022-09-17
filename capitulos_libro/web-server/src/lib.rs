@@ -2,7 +2,7 @@ use std::{thread, sync::{mpsc, Mutex, Arc}};
 
 pub struct ThreadPool {
     workers : Vec<Worker>,
-    sender: mpsc::Sender<Job>
+    sender: Option<mpsc::Sender<Job>>
 }
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
@@ -22,7 +22,7 @@ impl ThreadPool {
         for id in 0..size {
             workers.push(Worker::new(id, Arc::clone(&receiver)));
         }
-        ThreadPool{workers, sender}
+        ThreadPool{workers, sender: Some(sender)}
     }
     
     pub fn execute<F>(&self, f: F)
@@ -30,12 +30,12 @@ impl ThreadPool {
         F: FnOnce() + Send + 'static,
         {
             let job = Box::new(f);
-            self.sender.send(job).unwrap();
+            self.sender.as_ref().unwrap().send(job).unwrap();
         }
 }
 struct Worker {
     id: usize,
-    thread : thread::JoinHandle<()>
+    thread : Option<thread::JoinHandle<()>>
 }
 
 impl Worker {
@@ -43,11 +43,34 @@ impl Worker {
         let thread = thread::spawn(move || loop {
             // ver que este thread se bloquea hasta que recibe un job, si no pongo el loop
             // solo trabaja 1 vez este worker
-            let job = receiver.lock().unwrap().recv().unwrap();
-            println!("Worker {id} got a job; executing.");
-            job();
+            match receiver.lock().unwrap().recv() {
+                Ok(job) =>  {
+                    println!("Worker {id} got a job; executing.");
+                    job();
+                },
+                Err(_) => {
+                    println!("Worker {id} is disconnected; shutting down.");
+                    break;
+                }
+            };
         });
-        Worker { id, thread }
+        Worker { id, thread: Some(thread) }
     }
 
+}
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        // Dropea al sender para que los otros hilos al hacer recv, lanze error
+        // Nuevamente se dropea utilizando la tecnica option + take
+        drop(self.sender.take());
+
+        for worker in &mut self.workers {
+            println!("Shutting down worker {}", worker.id);
+            // Cambia el thread por un None, increible (Option + take)
+            if let Some(thread) = worker.thread.take() {
+                thread.join().unwrap();
+            }
+        }
+    }
 }
